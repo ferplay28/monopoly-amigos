@@ -1,303 +1,389 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monopoly Web - UI Prototype</title>
+  <style>
+    /* --------------------------------------------------
+       1. ESTILOS GENERALES Y RESET
+    -------------------------------------------------- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
 
-app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <title>Monopoly con Amigos</title>
-      <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #121212; color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        h1 { margin-top: 0; color: #4caf50; }
-        #setup { margin-top: 50px; background: #1e1e1e; padding: 30px; border-radius: 10px; text-align: center; border: 1px solid #333; }
-        input { padding: 12px; font-size: 16px; border-radius: 5px; border: 1px solid #444; background: #2a2a2a; color: white; margin-right: 10px; }
-        button { background: #4caf50; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #45a049; }
-        button:disabled { background: #555; cursor: not-allowed; }
+    /* Utilitario para alternar pantallas */
+    .screen {
+      display: none;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
 
-        #game-container { display: none; width: 100%; max-width: 1000px; grid-template-columns: 2fr 1fr; gap: 20px; }
-        .board { display: grid; grid-template-columns: repeat(11, 1fr); grid-template-rows: repeat(11, 1fr); width: 600px; height: 600px; background: #c7e6c7; border: 4px solid #333; position: relative; border-radius: 8px; }
-        
-        .cell { border: 1px solid #333; font-size: 9px; text-align: center; color: #111; display: flex; flex-direction: column; justify-content: space-between; font-weight: bold; position: relative; background: #e8f5e9; }
-        .cell-header { height: 15px; width: 100%; }
-        .cell-name { padding: 2px; }
-        .cell-price { margin-bottom: 2px; }
+    .screen.active {
+      display: flex;
+    }
 
-        .cell-0 { grid-column: 11; grid-row: 11; background: #ffcdd2; }
-        .cell-1 { grid-column: 10; grid-row: 11; } .cell-1 .cell-header { background: #795548; }
-        .cell-2 { grid-column: 9; grid-row: 11; } .cell-2 .cell-header { background: #795548; }
-        .cell-3 { grid-column: 8; grid-row: 11; } .cell-3 .cell-header { background: #80d8ff; }
-        .cell-4 { grid-column: 7; grid-row: 11; } .cell-4 .cell-header { background: #80d8ff; }
-        .cell-5 { grid-column: 6; grid-row: 11; background: #e0e0e0; }
-        .cell-6 { grid-column: 5; grid-row: 11; } .cell-6 .cell-header { background: #ff80ab; }
-        .cell-7 { grid-column: 4; grid-row: 11; } .cell-7 .cell-header { background: #ff80ab; }
-        .cell-8 { grid-column: 3; grid-row: 11; } .cell-8 .cell-header { background: #ffab40; }
-        .cell-9 { grid-column: 2; grid-row: 11; } .cell-9 .cell-header { background: #ffab40; }
-        .cell-10 { grid-column: 1; grid-row: 11; background: #ffe0b2; }
+    /* --------------------------------------------------
+       2. PANTALLA 1: MENÚ DE SELECCIÓN DE MODO
+    -------------------------------------------------- */
+    #screen-menu {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      padding: 20px;
+    }
 
-        .cell-11 { grid-column: 1; grid-row: 10; } .cell-11 .cell-header { background: #ff5252; }
-        .cell-12 { grid-column: 1; grid-row: 9; } .cell-12 .cell-header { background: #ff5252; }
-        .cell-13 { grid-column: 1; grid-row: 8; } .cell-13 .cell-header { background: #ffd740; }
-        .cell-14 { grid-column: 1; grid-row: 7; } .cell-14 .cell-header { background: #ffd740; }
-        .cell-15 { grid-column: 1; grid-row: 6; background: #e0e0e0; }
-        .cell-16 { grid-column: 1; grid-row: 5; } .cell-16 .cell-header { background: #b9f6ca; }
-        .cell-17 { grid-column: 1; grid-row: 4; } .cell-17 .cell-header { background: #b9f6ca; }
-        .cell-18 { grid-column: 1; grid-row: 3; } .cell-18 .cell-header { background: #82b1ff; }
-        .cell-19 { grid-column: 1; grid-row: 2; } .cell-19 .cell-header { background: #82b1ff; }
-        .cell-20 { grid-column: 1; grid-row: 1; background: #b2dfdb; }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 40px;
+    }
 
-        .cell-21 { grid-column: 2; grid-row: 1; } .cell-21 .cell-header { background: #ea80fc; }
-        .cell-22 { grid-column: 3; grid-row: 1; } .cell-22 .cell-header { background: #ea80fc; }
-        .cell-23 { grid-column: 4; grid-row: 1; } .cell-23 .cell-header { background: #8d6e63; }
-        .cell-24 { grid-column: 5; grid-row: 1; } .cell-24 .cell-header { background: #8d6e63; }
-        .cell-25 { grid-column: 6; grid-row: 1; background: #e0e0e0; }
-        .cell-26 { grid-column: 7; grid-row: 1; } .cell-26 .cell-header { background: #cfd8dc; }
-        .cell-27 { grid-column: 8; grid-row: 1; } .cell-27 .cell-header { background: #cfd8dc; }
-        .cell-28 { grid-column: 9; grid-row: 1; } .cell-28 .cell-header { background: #a1887f; }
-        .cell-29 { grid-column: 10; grid-row: 1; } .cell-29 .cell-header { background: #a1887f; }
-        .cell-30 { grid-column: 11; grid-row: 1; background: #ffcc80; }
+    .logo-container h1 {
+      font-size: 3rem;
+      color: #ef4444;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      text-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
 
-        .cell-31 { grid-column: 11; grid-row: 2; } .cell-31 .cell-header { background: #80cbc4; }
-        .cell-32 { grid-column: 11; grid-row: 3; } .cell-32 .cell-header { background: #80cbc4; }
-        .cell-33 { grid-column: 11; grid-row: 4; } .cell-33 .cell-header { background: #9fa8da; }
-        .cell-34 { grid-column: 11; grid-row: 5; } .cell-34 .cell-header { background: #9fa8da; }
-        .cell-35 { grid-column: 11; grid-row: 6; background: #e0e0e0; }
-        .cell-36 { grid-column: 11; grid-row: 7; } .cell-36 .cell-header { background: #f48fb1; }
-        .cell-37 { grid-column: 11; grid-row: 8; } .cell-37 .cell-header { background: #f48fb1; }
-        .cell-38 { grid-column: 11; grid-row: 9; } .cell-38 .cell-header { background: #b0bec5; }
-        .cell-39 { grid-column: 11; grid-row: 10; } .cell-39 .cell-header { background: #b0bec5; }
+    .menu-options {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      max-width: 320px;
+    }
 
-        .board-center { grid-column: 2 / 11; grid-row: 2 / 11; background: #2a2a2a; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-        .player-token { width: 14px; height: 14px; border-radius: 50%; border: 1px solid white; display: inline-block; position: absolute; bottom: 2px; }
-        .panel { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; }
-        .player-card { background: #2a2a2a; padding: 10px; margin-bottom: 10px; border-radius: 6px; border-left: 5px solid #fff; }
-        #logs { background: #000; height: 150px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 12px; border-radius: 5px; color: #00ff00; margin-top: 15px; }
-      </style>
-    </head>
-    <body>
+    .btn-main {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border: none;
+      padding: 16px 24px;
+      border-radius: 30px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+    }
 
-      <h1>🎲 MONOPOLY ONLINE 🎲</h1>
+    .btn-main:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+    }
 
-      <div id="setup">
-        <h2>Unirse al Juego</h2>
-        <input type="text" id="username" placeholder="Tu Nombre">
-        <button onclick="joinGame()">Entrar</button>
+    .btn-main.secondary {
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    }
+
+    /* --------------------------------------------------
+       3. PANTALLA 2: PERSONALIZACIÓN / LOBBY
+    -------------------------------------------------- */
+    #screen-lobby {
+      flex-direction: column;
+      background: #1e293b;
+    }
+
+    .header-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background: rgba(15, 23, 42, 0.8);
+      border-bottom: 1px solid #334155;
+    }
+
+    .steps-bar {
+      display: flex;
+      gap: 12px;
+    }
+
+    .step-pill {
+      padding: 6px 16px;
+      background: #334155;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    .step-pill.active {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .lobby-content {
+      display: flex;
+      flex: 1;
+      padding: 24px;
+      gap: 24px;
+    }
+
+    .options-panel {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card-option {
+      background: #0f172a;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .card-option:hover, .card-option.selected {
+      border-color: #3b82f6;
+    }
+
+    .preview-panel {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* --------------------------------------------------
+       4. PANTALLA 3: HUD DE JUEGO (GAMEPLAY)
+    -------------------------------------------------- */
+    #screen-gameplay {
+      position: relative;
+      background: #020617;
+    }
+
+    .board-viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle, #1e293b 0%, #020617 100%);
+    }
+
+    .board-placeholder {
+      width: 450px;
+      height: 450px;
+      border: 4px dashed #334155;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      font-weight: bold;
+    }
+
+    .players-sidebar {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .player-hud-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border-radius: 30px 12px 12px 30px;
+      display: flex;
+      align-items: center;
+      padding: 8px 16px 8px 8px;
+      min-width: 200px;
+      border: 2px solid transparent;
+    }
+
+    .player-hud-card.active-turn {
+      border-color: #a855f7;
+      box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+    }
+
+    .hud-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #3b82f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .hud-info {
+      margin-left: 12px;
+    }
+
+    .hud-name { font-size: 0.85rem; font-weight: 700; }
+    .hud-money { font-size: 0.95rem; font-weight: 800; color: #facc15; }
+
+    /* Modal emergente dentro del juego */
+    .game-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 12px;
+      width: 280px;
+      padding: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      display: none;
+    }
+
+    .card-header-color {
+      background: #10b981;
+      color: white;
+      text-align: center;
+      font-weight: 800;
+      padding: 8px;
+      border-radius: 6px 6px 0 0;
+      margin: -16px -16px 12px -16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================
+       PANTALLA 1: MENÚ PRINCIPAL
+  =========================================== -->
+  <section id="screen-menu" class="screen active">
+    <div class="logo-container">
+      <h1>Monopoly</h1>
+      <p style="color: #94a3b8;">Edición Web 3D</p>
+    </div>
+    <div class="menu-options">
+      <button class="btn-main" onclick="navigateTo('screen-lobby')">Jugar Local</button>
+      <button class="btn-main secondary" onclick="alert('Modo Online Próximamente')">Multijugador</button>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       PANTALLA 2: LOBBY DE PERSONALIZACIÓN
+  =========================================== -->
+  <section id="screen-lobby" class="screen">
+    <header class="header-nav">
+      <button class="btn-main secondary" style="padding: 6px 16px; font-size: 0.9rem;" onclick="navigateTo('screen-menu')">← Volver</button>
+      <div class="steps-bar">
+        <span class="step-pill active">1. Reglas</span>
+        <span class="step-pill">2. Tablero</span>
+        <span class="step-pill">3. Peón</span>
       </div>
+      <div></div>
+    </header>
 
-      <div id="game-container">
-        <div class="board" id="board">
-          <div class="board-center">
-            <h2 id="turn-info" style="color:#fff;">Esperando jugadores...</h2>
-            <div id="dice-display" style="font-size:32px; margin: 15px 0;">🎲 -</div>
-            <button id="roll-btn" onclick="rollDice()" disabled>Tirar Dados</button>
-            <button id="buy-btn" onclick="buyProperty()" style="display:none; background:#2196F3; margin-top:20px;">Comprar Propiedad</button>
+    <div class="lobby-content">
+      <div class="options-panel">
+        <h2>Selecciona Modo de Juego</h2>
+        <div class="card-option selected">
+          <div>
+            <h3>Monopoly Clásico</h3>
+            <p style="color: #94a3b8; font-size: 0.85rem;">Reglas tradicionales, compra de propiedades y bancarrota.</p>
+          </div>
+          <span>✓</span>
+        </div>
+        <div class="card-option">
+          <div>
+            <h3>Modo Rápido</h3>
+            <p style="color: #94a3b8; font-size: 0.85rem;">Partidas de 20 minutos con subastas automáticas.</p>
           </div>
         </div>
-
-        <div class="panel">
-          <h3>Jugadores (<span id="count">0</span>/6)</h3>
-          <div id="players-list"></div>
-          <h4>Historial</h4>
-          <div id="logs"></div>
-        </div>
       </div>
 
-      <script src="/socket.io/socket.io.js"></script>
-      <script>
-        const socket = io();
-        let myId = '';
-        const colors = ['#f44336', '#2196F3', '#4CAF50', '#FFEB3B', '#9C27B0', '#FF9800'];
+      <div class="preview-panel">
+        <div style="width: 100px; height: 100px; background: #334155; border-radius: 50%; margin-bottom: 16px; display:flex; align-items:center; justify-content:center; font-size: 2rem;">🎲</div>
+        <h3>Listo para jugar</h3>
+        <button class="btn-main" style="margin-top: 24px; width: 100%;" onclick="navigateTo('screen-gameplay')">Iniciar Partida</button>
+      </div>
+    </div>
+  </section>
 
-        const boardData = [
-          { name: "SALIDA", price: 0 }, { name: "Arequipa", price: 60 }, { name: "Cusco", price: 60 },
-          { name: "Trujillo", price: 100 }, { name: "Chiclayo", price: 100 }, { name: "Tren Sur", price: 200 },
-          { name: "Piura", price: 140 }, { name: "Iquitos", price: 140 }, { name: "Huancayo", price: 160 },
-          { name: "Tacna", price: 160 }, { name: "CARCEL", price: 0 }, { name: "Puno", price: 180 },
-          { name: "Cajamarca", price: 180 }, { name: "Ayacucho", price: 200 }, { name: "Tarapoto", price: 200 },
-          { name: "Tren Norte", price: 200 }, { name: "Huaraz", price: 220 }, { name: "Ica", price: 220 },
-          { name: "Chincha", price: 240 }, { name: "Pisco", price: 240 }, { name: "PARADA", price: 0 },
-          { name: "Sullana", price: 260 }, { name: "Tumbes", price: 260 }, { name: "Talara", price: 280 },
-          { name: "Juliaca", price: 280 }, { name: "Tren Oeste", price: 200 }, { name: "Moquegua", price: 300 },
-          { name: "Ilo", price: 300 }, { name: "Chimbote", price: 320 }, { name: "Barranca", price: 320 },
-          { name: "VAYASE A CARCEL", price: 0 }, { name: "Pucallpa", price: 350 }, { name: "Moyobamba", price: 350 },
-          { name: "Huánuco", price: 380 }, { name: "Abancay", price: 380 }, { name: "Tren Este", price: 200 },
-          { name: "Jaén", price: 400 }, { name: "Cerro de Pasco", price: 400 }, { name: "IMPUESTO", price: 0 },
-          { name: "Lima Base", price: 500 }
-        ];
+  <!-- ==========================================
+       PANTALLA 3: GAMEPLAY (TABLERO Y HUD)
+  =========================================== -->
+  <section id="screen-gameplay" class="screen">
+    <div class="board-viewport">
+      <div class="board-placeholder">
+        [ Render del Tablero 3D ]
+        <br>
+        <button class="btn-main" style="margin-top: 16px;" onclick="togglePropertyModal()">Probar Evento de Compra</button>
+      </div>
+    </div>
 
-        const boardEl = document.getElementById('board');
-        boardData.forEach((b, i) => {
-          const cell = document.createElement('div');
-          cell.className = 'cell cell-' + i;
-          cell.id = 'cell-' + i;
-          cell.innerHTML = '<div class="cell-header"></div><div class="cell-name">' + b.name + '</div><div class="cell-price">' + (b.price ? '$' + b.price : '') + '</div>';
-          boardEl.appendChild(cell);
-        });
+    <!-- HUD Lateral de Jugadores -->
+    <aside class="players-sidebar">
+      <div class="player-hud-card active-turn">
+        <div class="hud-avatar">P1</div>
+        <div class="hud-info">
+          <div class="hud-name">EpicNabob116</div>
+          <div class="hud-money">ℳ 1,500</div>
+        </div>
+      </div>
+      <div class="player-hud-card">
+        <div class="hud-avatar" style="background: #ef4444;">BOT</div>
+        <div class="hud-info">
+          <div class="hud-name">Bot Pagoda</div>
+          <div class="hud-money">ℳ 1,200</div>
+        </div>
+      </div>
+    </aside>
 
-        function joinGame() {
-          const name = document.getElementById('username').value.trim();
-          if (!name) return alert('Escribe tu nombre');
-          socket.emit('joinGame', name);
-          document.getElementById('setup').style.display = 'none';
-          document.getElementById('game-container').style.display = 'grid';
-        }
+    <!-- Modal Emergente (Propiedad) -->
+    <div id="property-modal" class="game-modal">
+      <div class="card-header-color">SENDERO DEL PATIO</div>
+      <p style="font-size: 0.85rem; text-align: center; margin-bottom: 12px;">¿Deseas comprar esta propiedad por <strong>ℳ 300</strong>?</p>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-main" style="flex: 1; padding: 8px; font-size: 0.85rem;" onclick="togglePropertyModal()">Comprar</button>
+        <button class="btn-main secondary" style="flex: 1; padding: 8px; font-size: 0.85rem;" onclick="togglePropertyModal()">Pasar</button>
+      </div>
+    </div>
+  </section>
 
-        function rollDice() {
-          socket.emit('rollDice');
-        }
-
-        function buyProperty() {
-          socket.emit('buyProperty');
-        }
-
-        socket.on('init', (data) => { myId = data.id; });
-
-        socket.on('updateGameState', (state) => {
-          document.getElementById('count').innerText = state.players.length;
-          document.querySelectorAll('.player-token').forEach(t => t.remove());
-
-          const list = document.getElementById('players-list');
-          list.innerHTML = '';
-
-          state.players.forEach((p, idx) => {
-            const isMyTurn = idx === state.currentTurn;
-            const pColor = colors[idx % colors.length];
-
-            const cell = document.getElementById('cell-' + p.position);
-            if (cell) {
-              const token = document.createElement('div');
-              token.className = 'player-token';
-              token.style.background = pColor;
-              token.style.left = (idx * 16 + 2) + 'px';
-              cell.appendChild(token);
-            }
-
-            list.innerHTML += '<div class="player-card" style="border-left-color: ' + pColor + '"><strong>' + p.name + ' ' + (p.id === myId ? '(Tú)' : '') + '</strong><br>Dinero: $' + p.money + ' | Casilla: ' + p.position + '<br>Propiedades: ' + p.properties.length + '</div>';
-
-            if (isMyTurn && p.id === myId) {
-              document.getElementById('roll-btn').disabled = state.hasRolled;
-              document.getElementById('turn-info').innerText = '¡ES TU TURNO!';
-              document.getElementById('turn-info').style.color = '#4caf50';
-              
-              const currentCell = boardData[p.position];
-              const isPurchasable = currentCell.price > 0 && !state.propertiesOwned[p.position];
-              document.getElementById('buy-btn').style.display = (state.hasRolled && isPurchasable) ? 'block' : 'none';
-            } else if (isMyTurn) {
-              document.getElementById('roll-btn').disabled = true;
-              document.getElementById('buy-btn').style.display = 'none';
-              document.getElementById('turn-info').innerText = 'Turno de: ' + p.name;
-              document.getElementById('turn-info').style.color = '#fff';
-            }
-          });
-        });
-
-        socket.on('diceRolled', (data) => {
-          document.getElementById('dice-display').innerText = '🎲 ' + data.dice;
-          addLog(data.player + ' tiró un ' + data.dice + ' y movió a ' + boardData[data.position].name);
-        });
-
-        socket.on('log', (msg) => addLog(msg));
-
-        function addLog(msg) {
-          const logs = document.getElementById('logs');
-          logs.innerHTML += '<div>> ' + msg + '</div>';
-          logs.scrollTop = logs.scrollHeight;
-        }
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-let gameState = {
-  players: [],
-  currentTurn: 0,
-  hasRolled: false,
-  propertiesOwned: {}
-};
-
-const boardPrices = [0,60,60,100,100,200,140,140,160,160,0,180,180,200,200,200,220,220,240,240,0,260,260,280,280,200,300,300,320,320,0,350,350,380,380,200,400,400,0,500];
-
-io.on('connection', (socket) => {
-  socket.emit('init', { id: socket.id });
-
-  socket.on('joinGame', (name) => {
-    if (gameState.players.length < 6) {
-      gameState.players.push({
-        id: socket.id,
-        name: name,
-        position: 0,
-        money: 1500,
-        properties: []
+  <!-- ==========================================
+       5. LÓGICA DE NAVEGACIÓN SIMPLE (JS)
+  =========================================== -->
+  <script>
+    function navigateTo(screenId) {
+      // Ocultar todas las pantallas
+      document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
       });
-      io.emit('updateGameState', gameState);
-      io.emit('log', name + ' se ha unido a la partida.');
-    }
-  });
-
-  socket.on('rollDice', () => {
-    const player = gameState.players[gameState.currentTurn];
-    if (player && player.id === socket.id && !gameState.hasRolled) {
-      const dice = Math.floor(Math.random() * 6) + 1;
-      player.position = (player.position + dice) % 40;
-      gameState.hasRolled = true;
-
-      const ownerId = gameState.propertiesOwned[player.position];
-      if (ownerId && ownerId !== player.id) {
-        const owner = gameState.players.find(p => p.id === ownerId);
-        const rent = Math.floor(boardPrices[player.position] * 0.25);
-        player.money -= rent;
-        owner.money += rent;
-        io.emit('log', player.name + ' pagó $' + rent + ' de renta a ' + owner.name + '.');
-      }
-
-      io.emit('diceRolled', { player: player.name, dice: dice, position: player.position });
-      
-      setTimeout(() => {
-        if (gameState.hasRolled) {
-          gameState.currentTurn = (gameState.currentTurn + 1) % gameState.players.length;
-          gameState.hasRolled = false;
-          io.emit('updateGameState', gameState);
-        }
-      }, 3500);
-
-      io.emit('updateGameState', gameState);
-    }
-  });
-
-  socket.on('buyProperty', () => {
-    const player = gameState.players[gameState.currentTurn];
-    if (player && player.id === socket.id && gameState.hasRolled) {
-      const price = boardPrices[player.position];
-      if (price > 0 && !gameState.propertiesOwned[player.position] && player.money >= price) {
-        player.money -= price;
-        player.properties.push(player.position);
-        gameState.propertiesOwned[player.position] = player.id;
-        io.emit('log', player.name + ' compró la propiedad por $' + price + '!');
-        
-        gameState.currentTurn = (gameState.currentTurn + 1) % gameState.players.length;
-        gameState.hasRolled = false;
-        io.emit('updateGameState', gameState);
+      // Mostrar la pantalla seleccionada
+      const targetScreen = document.getElementById(screenId);
+      if (targetScreen) {
+        targetScreen.classList.add('active');
       }
     }
-  });
 
-  socket.on('disconnect', () => {
-    gameState.players = gameState.players.filter(p => p.id !== socket.id);
-    if (gameState.currentTurn >= gameState.players.length) {
-      gameState.currentTurn = 0;
+    function togglePropertyModal() {
+      const modal = document.getElementById('property-modal');
+      modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
     }
-    io.emit('updateGameState', gameState);
-  });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('Servidor corriendo en el puerto ' + PORT));
+  </script>
+</body>
+</html>
