@@ -31,7 +31,6 @@ app.get('/', (req, res) => {
         .cell-name { padding: 2px; }
         .cell-price { margin-bottom: 2px; }
 
-        /* Posicionamiento en el grid */
         .cell-0 { grid-column: 11; grid-row: 11; background: #ffcdd2; }
         .cell-1 { grid-column: 10; grid-row: 11; } .cell-1 .cell-header { background: #795548; }
         .cell-2 { grid-column: 9; grid-row: 11; } .cell-2 .cell-header { background: #795548; }
@@ -77,9 +76,7 @@ app.get('/', (req, res) => {
         .cell-39 { grid-column: 11; grid-row: 10; } .cell-39 .cell-header { background: #b0bec5; }
 
         .board-center { grid-column: 2 / 11; grid-row: 2 / 11; background: #2a2a2a; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-        
         .player-token { width: 14px; height: 14px; border-radius: 50%; border: 1px solid white; display: inline-block; position: absolute; bottom: 2px; }
-        
         .panel { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; }
         .player-card { background: #2a2a2a; padding: 10px; margin-bottom: 10px; border-radius: 6px; border-left: 5px solid #fff; }
         #logs { background: #000; height: 150px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 12px; border-radius: 5px; color: #00ff00; margin-top: 15px; }
@@ -101,7 +98,7 @@ app.get('/', (req, res) => {
             <h2 id="turn-info" style="color:#fff;">Esperando jugadores...</h2>
             <div id="dice-display" style="font-size:32px; margin: 15px 0;">🎲 -</div>
             <button id="roll-btn" onclick="rollDice()" disabled>Tirar Dados</button>
-            <button id="buy-btn" onclick="buyProperty()" style="display:none; background:#2196F3; margin-top:100px;">Comprar Propiedad</button>
+            <button id="buy-btn" onclick="buyProperty()" style="display:none; background:#2196F3; margin-top:20px;">Comprar Propiedad</button>
           </div>
         </div>
 
@@ -136,17 +133,12 @@ app.get('/', (req, res) => {
           { name: "Lima Base", price: 500 }
         ];
 
-        // Crear las casillas en el HTML
         const boardEl = document.getElementById('board');
         boardData.forEach((b, i) => {
           const cell = document.createElement('div');
-          cell.className = \`cell cell-\${i}\`;
-          cell.id = \`cell-\${i}\`;
-          cell.innerHTML = \`
-            <div class="cell-header"></div>
-            <div class="cell-name">\${b.name}</div>
-            <div class="cell-price">\${b.price ? '$' + b.price : ''}</div>
-          \`;
+          cell.className = 'cell cell-' + i;
+          cell.id = 'cell-' + i;
+          cell.innerHTML = '<div class="cell-header"></div><div class="cell-name">' + b.name + '</div><div class="cell-price">' + (b.price ? '$' + b.price : '') + '</div>';
           boardEl.appendChild(cell);
         });
 
@@ -170,11 +162,8 @@ app.get('/', (req, res) => {
 
         socket.on('updateGameState', (state) => {
           document.getElementById('count').innerText = state.players.length;
-          
-          // Limpiar fichas anteriores
           document.querySelectorAll('.player-token').forEach(t => t.remove());
 
-          // Renderizar jugadores
           const list = document.getElementById('players-list');
           list.innerHTML = '';
 
@@ -182,8 +171,7 @@ app.get('/', (req, res) => {
             const isMyTurn = idx === state.currentTurn;
             const pColor = colors[idx % colors.length];
 
-            // Dibujar ficha en tablero
-            const cell = document.getElementById(\`cell-\${p.position}\`);
+            const cell = document.getElementById('cell-' + p.position);
             if (cell) {
               const token = document.createElement('div');
               token.className = 'player-token';
@@ -192,16 +180,8 @@ app.get('/', (req, res) => {
               cell.appendChild(token);
             }
 
-            // Lista lateral
-            list.innerHTML += \`
-              <div class="player-card" style="border-left-color: \${pColor}">
-                <strong>\${p.name} \${p.id === myId ? '(Tú)' : ''}</strong><br>
-                Dinero: $\${p.money} | Casilla: \${p.position}<br>
-                Propiedades: \${p.properties.length}
-              </div>
-            \`;
+            list.innerHTML += '<div class="player-card" style="border-left-color: ' + pColor + '"><strong>' + p.name + ' ' + (p.id === myId ? '(Tú)' : '') + '</strong><br>Dinero: $' + p.money + ' | Casilla: ' + p.position + '<br>Propiedades: ' + p.properties.length + '</div>';
 
-            // Botones de control
             if (isMyTurn && p.id === myId) {
               document.getElementById('roll-btn').disabled = state.hasRolled;
               document.getElementById('turn-info').innerText = '¡ES TU TURNO!';
@@ -220,15 +200,15 @@ app.get('/', (req, res) => {
         });
 
         socket.on('diceRolled', (data) => {
-          document.getElementById('dice-display').innerText = \`🎲 \${data.dice}\`;
-          addLog(\`\${data.player} tiró un \${data.dice} y movió a \${boardData[data.position].name}\`);
+          document.getElementById('dice-display').innerText = '🎲 ' + data.dice;
+          addLog(data.player + ' tiró un ' + data.dice + ' y movió a ' + boardData[data.position].name);
         });
 
         socket.on('log', (msg) => addLog(msg));
 
         function addLog(msg) {
           const logs = document.getElementById('logs');
-          logs.innerHTML += \`<div>> \${msg}</div>\`;
+          logs.innerHTML += '<div>> ' + msg + '</div>';
           logs.scrollTop = logs.scrollHeight;
         }
       </script>
@@ -237,12 +217,11 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Lógica del juego en el servidor
 let gameState = {
   players: [],
   currentTurn: 0,
   hasRolled: false,
-  propertiesOwned: {} // casillaIndex: playerId
+  propertiesOwned: {}
 };
 
 const boardPrices = [0,60,60,100,100,200,140,140,160,160,0,180,180,200,200,200,220,220,240,240,0,260,260,280,280,200,300,300,320,320,0,350,350,380,380,200,400,400,0,500];
@@ -260,7 +239,7 @@ io.on('connection', (socket) => {
         properties: []
       });
       io.emit('updateGameState', gameState);
-      io.emit('log', \`\${name} se ha unido a la partida.\`);
+      io.emit('log', name + ' se ha unido a la partida.');
     }
   });
 
@@ -271,19 +250,17 @@ io.on('connection', (socket) => {
       player.position = (player.position + dice) % 40;
       gameState.hasRolled = true;
 
-      // Cobrar Renta si la casilla pertenece a otro
       const ownerId = gameState.propertiesOwned[player.position];
       if (ownerId && ownerId !== player.id) {
         const owner = gameState.players.find(p => p.id === ownerId);
         const rent = Math.floor(boardPrices[player.position] * 0.25);
         player.money -= rent;
         owner.money += rent;
-        io.emit('log', \`\${player.name} pagó $\${rent} de renta a \${owner.name}.\`);
+        io.emit('log', player.name + ' pagó $' + rent + ' de renta a ' + owner.name + '.');
       }
 
       io.emit('diceRolled', { player: player.name, dice: dice, position: player.position });
       
-      // Auto pasar turno después de 3 segundos si no compra
       setTimeout(() => {
         if (gameState.hasRolled) {
           gameState.currentTurn = (gameState.currentTurn + 1) % gameState.players.length;
@@ -304,9 +281,8 @@ io.on('connection', (socket) => {
         player.money -= price;
         player.properties.push(player.position);
         gameState.propertiesOwned[player.position] = player.id;
-        io.emit('log', \`\${player.name} compró la propiedad por $\${price}!\`);
+        io.emit('log', player.name + ' compró la propiedad por $' + price + '!');
         
-        // Pasar turno
         gameState.currentTurn = (gameState.currentTurn + 1) % gameState.players.length;
         gameState.hasRolled = false;
         io.emit('updateGameState', gameState);
